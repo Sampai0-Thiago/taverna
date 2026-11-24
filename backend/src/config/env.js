@@ -57,21 +57,55 @@ function parseDatabaseUrl(raw) {
   };
 }
 
-/** SMTP para envio do código de confirmação. Sem SMTP_HOST, o código só aparece no log (apenas fora de produção). */
+/**
+ * Envio de e-mail (código de confirmação). Prioridade:
+ *   1. Brevo (API HTTP) — BREVO_API_KEY. Funciona no Render grátis, que bloqueia portas SMTP.
+ *   2. SMTP — SMTP_HOST/SMTP_USER/SMTP_PASS (Gmail com senha de app, Outlook…).
+ *   3. Nenhum — só fora de produção: o código aparece no log da API.
+ */
 function mailConfig() {
+  const from = process.env.MAIL_FROM || process.env.SMTP_USER || null;
+  if (process.env.BREVO_API_KEY) {
+    if (!from) throw new Error('MAIL_FROM é obrigatório com BREVO_API_KEY (remetente verificado no Brevo).');
+    return { provider: 'brevo', apiKey: process.env.BREVO_API_KEY, from };
+  }
   const host = process.env.SMTP_HOST || null;
   if (!host) {
-    if (isProd) throw new Error('SMTP_HOST é obrigatório em produção (envio do código de confirmação de e-mail).');
+    if (isProd) throw new Error('Configure BREVO_API_KEY (ou SMTP_HOST) em produção para enviar o código de confirmação.');
     return null;
   }
   const port = Number(process.env.SMTP_PORT ?? 587);
   const user = required('SMTP_USER');
   return {
+    provider: 'smtp',
     host,
     port,
     secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
     auth: { user, pass: required('SMTP_PASS') },
-    from: process.env.MAIL_FROM || user,
+    from: from ?? user,
+  };
+}
+
+/**
+ * Armazenamento dos uploads. Com R2_BUCKET definido, os arquivos vão para o Cloudflare R2
+ * (necessário no Render grátis, cujo disco é apagado a cada reinício). Sem ele, ficam em UPLOAD_DIR.
+ */
+function storageConfig() {
+  if (!process.env.R2_BUCKET) {
+    if (isProd) {
+      console.warn('[aviso] R2_BUCKET não definido: uploads ficam no disco local e podem ser perdidos em reinícios.');
+    }
+    return { driver: 'local' };
+  }
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const endpoint = process.env.R2_ENDPOINT || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : null);
+  if (!endpoint) throw new Error('Defina R2_ACCOUNT_ID (ou R2_ENDPOINT) para usar o Cloudflare R2.');
+  return {
+    driver: 'r2',
+    bucket: process.env.R2_BUCKET,
+    endpoint,
+    accessKeyId: required('R2_ACCESS_KEY_ID'),
+    secretAccessKey: required('R2_SECRET_ACCESS_KEY'),
   };
 }
 
@@ -95,5 +129,8 @@ export const env = Object.freeze({
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd,
   logLevel: process.env.LOG_LEVEL ?? 'info',
   mail: mailConfig(),
+  storage: Object.freeze(storageConfig()),
+  // Quantos proxies confiáveis há na frente da API (Render = 1; Vercel → Render pode exigir 2).
+  trustProxy: Number(process.env.TRUST_PROXY ?? 1),
   appName: process.env.APP_NAME || 'GREMAD',
 });

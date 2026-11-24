@@ -10,7 +10,7 @@ flowchart LR
   subgraph Servidor
     NGINX["nginx<br/>estáticos + proxy /api"]
     API["API Express 5<br/>(Node 22, ESM)"]
-    FS[("Disco / volume<br/>uploads")]
+    FS[("Cloudflare R2<br/>(ou disco local)")]
     DB[("TiDB Cloud")]
   end
   SPA -- "HTTPS · cookie httpOnly" --> NGINX
@@ -95,7 +95,7 @@ Todas as respostas de erro têm o mesmo formato:
 - Violações do banco viram respostas HTTP: `ER_DUP_ENTRY` → 409, `ER_NO_REFERENCED_ROW_2` → 400, `ER_CHECK_CONSTRAINT_VIOLATED` → 422.
 - Cadastro exige **confirmação de e-mail**: código de 6 dígitos (`crypto.randomInt`), guardado só como HMAC, válido por 15 min, 5 tentativas, reenvio a cada 60 s. `requireAuth` recusa contas não confirmadas (`403 EMAIL_NOT_VERIFIED`).
 - Qualquer outro erro → 500 genérico, com stack apenas no log.
-- Se a requisição falhar **depois** de um upload, os arquivos recém-gravados são apagados (sem lixo no disco).
+- Se a requisição falhar **depois** de um upload, os arquivos recém-gravados são apagados (sem lixo no disco nem no R2).
 
 ### Segurança
 
@@ -123,7 +123,7 @@ Todas as respostas de erro têm o mesmo formato:
 
 ### Arquivos
 
-`storage/fileStorage.js` é a única porta de acesso ao disco. O banco guarda só o **nome** do arquivo; a URL é montada no mapper (`/api/files/<uuid>.<ext>`). Para migrar para S3/R2/MinIO basta reimplementar esse módulo.
+`storage/fileStorage.js` é a única porta de acesso aos arquivos, com dois drivers: **disco local** (padrão) e **Cloudflare R2** (quando `R2_BUCKET` está definido). O multer grava numa área temporária, a assinatura binária é conferida e só então o arquivo vai para o destino final. O banco guarda só o **nome** (`<uuid>.<ext>`); a URL é montada no mapper (`/api/files/<nome>`) e a API transmite o arquivo — com R2 ele nunca fica público, só usuários logados o recebem. Respostas têm `ETag` e `Cache-Control: private, immutable` (304 em revalidação).
 Arquivos substituídos ou de registros excluídos são removidos **depois** que o banco confirma a operação.
 
 ## Frontend
