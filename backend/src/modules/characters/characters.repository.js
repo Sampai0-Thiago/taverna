@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { query } from '../../db/pool.js';
 
 const SELECT = `
@@ -23,15 +24,17 @@ export const charactersRepository = {
   },
 
   async findById(id) {
-    const { rows } = await query(`${SELECT} WHERE c.id = $1`, [id]);
+    const { rows } = await query(`${SELECT} WHERE c.id = ?`, [id]);
     return rows[0] ?? null;
   },
 
   async create(ownerId, data) {
-    const { rows } = await query(
-      `INSERT INTO characters (owner_id, name, class_name, race, level, summary, portrait_file, sheet_file, sheet_original_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+    const id = randomUUID();
+    await query(
+      `INSERT INTO characters (id, owner_id, name, class_name, race, level, summary, portrait_file, sheet_file, sheet_original_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        id,
         ownerId,
         data.name,
         data.className ?? null,
@@ -43,7 +46,7 @@ export const charactersRepository = {
         data.sheetOriginalName ?? null,
       ],
     );
-    return this.findById(rows[0].id);
+    return this.findById(id);
   },
 
   async update(id, data) {
@@ -52,17 +55,17 @@ export const charactersRepository = {
     for (const [key, column] of Object.entries(COLUMNS)) {
       if (data[key] !== undefined) {
         values.push(data[key]);
-        sets.push(`${column} = $${values.length}`);
+        sets.push(`${column} = ?`);
       }
     }
     if (sets.length) {
       values.push(id);
-      await query(`UPDATE characters SET ${sets.join(', ')} WHERE id = $${values.length}`, values);
+      await query(`UPDATE characters SET ${sets.join(', ')} WHERE id = ?`, values);
     }
     return this.findById(id);
   },
 
   async remove(id) {
-    await query('DELETE FROM characters WHERE id = $1', [id]);
+    await query('DELETE FROM characters WHERE id = ?', [id]);
   },
 };

@@ -1,39 +1,25 @@
-# Sobe banco + API + frontend com um comando:  docker compose up --build
+# Sobe API + frontend com um comando:  docker compose up --build
+# O banco fica no TiDB Cloud (DATABASE_URL no .env).
 # Acesse http://localhost:8080
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: chaos
-      POSTGRES_PASSWORD: chaos
-      POSTGRES_DB: ordem_do_chaos
-      TZ: America/Sao_Paulo
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432" # opcional: acesso local para dev/ferramentas
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chaos -d ordem_do_chaos"]
-      interval: 5s
-      retries: 10
-
   api:
     build: ./backend
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3333
-      DATABASE_URL: postgres://chaos:chaos@db:5432/ordem_do_chaos
+      DATABASE_URL: ${DATABASE_URL:?defina DATABASE_URL (TiDB Cloud) no arquivo .env}
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-com-32+caracteres}
       CORS_ORIGIN: http://localhost:8080
       UPLOAD_DIR: /app/uploads
       MAX_UPLOAD_MB: 15
       INVITE_CODE: ${INVITE_CODE:-}
       MASTER_TOKEN: ${MASTER_TOKEN:?defina MASTER_TOKEN no arquivo .env}
+      SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST no arquivo .env}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       TZ: America/Sao_Paulo
     volumes:
       - uploads:/app/uploads # imagens e PDFs persistem entre deploys
@@ -47,5 +33,4 @@ services:
       - "8080:80"
 
 volumes:
-  pgdata:
   uploads:

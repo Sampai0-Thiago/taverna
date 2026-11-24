@@ -11,7 +11,7 @@ flowchart LR
     NGINX["nginx<br/>estáticos + proxy /api"]
     API["API Express 5<br/>(Node 22, ESM)"]
     FS[("Disco / volume<br/>uploads")]
-    DB[("PostgreSQL 16")]
+    DB[("TiDB Cloud")]
   end
   SPA -- "HTTPS · cookie httpOnly" --> NGINX
   NGINX -- "/api/*" --> API
@@ -25,7 +25,7 @@ flowchart LR
 sequenceDiagram
   participant J as Jogador
   participant API
-  participant DB as PostgreSQL
+  participant DB as TiDB
   J->>API: POST /users/me/master { token }
   API->>API: HMAC(JWT_SECRET, token) == HMAC do MASTER_TOKEN?
   API->>DB: UPDATE users SET master_token_fp, master_since
@@ -59,7 +59,7 @@ flowchart TB
   C --> S["*.service.js<br/>regras de negócio, permissões, DTOs"]
   S --> P["*.repository.js<br/>SQL parametrizado"]
   S --> Pure["regras puras<br/>summary.js · rules.js · engine.js"]
-  P --> DB[(PostgreSQL)]
+  P --> DB[(TiDB)]
 ```
 
 | Camada | Responsabilidade | Não pode |
@@ -80,7 +80,7 @@ helmet → cors → json(100kb) → cookieParser → pino-http
   → uploadFields (multer → verificação de magic bytes)
   → validate (Zod → req.valid)
   → controller → service → repository
-  → errorHandler (AppError | Multer | erros do Postgres → JSON padronizado; apaga uploads órfãos)
+  → errorHandler (AppError | Multer | erros do TiDB/MySQL → JSON padronizado; apaga uploads órfãos)
 ```
 
 ### Tratamento de erros
@@ -92,7 +92,8 @@ Todas as respostas de erro têm o mesmo formato:
 ```
 
 - `AppError` (400/401/403/404/409/415/422) → mensagem segura para o usuário.
-- Violações do Postgres viram respostas HTTP: `23505` → 409, `23503` → 400, `23514` → 422.
+- Violações do banco viram respostas HTTP: `ER_DUP_ENTRY` → 409, `ER_NO_REFERENCED_ROW_2` → 400, `ER_CHECK_CONSTRAINT_VIOLATED` → 422.
+- Cadastro exige **confirmação de e-mail**: código de 6 dígitos (`crypto.randomInt`), guardado só como HMAC, válido por 15 min, 5 tentativas, reenvio a cada 60 s. `requireAuth` recusa contas não confirmadas (`403 EMAIL_NOT_VERIFIED`).
 - Qualquer outro erro → 500 genérico, com stack apenas no log.
 - Se a requisição falhar **depois** de um upload, os arquivos recém-gravados são apagados (sem lixo no disco).
 

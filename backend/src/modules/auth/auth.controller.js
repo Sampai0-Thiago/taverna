@@ -1,5 +1,6 @@
 import { toUserDTO } from '../users/users.mapper.js';
 import { authService } from './auth.service.js';
+import { emailVerificationService } from './emailVerification.service.js';
 import { AUTH_COOKIE, cookieOptions } from './token.js';
 
 export const authController = {
@@ -19,4 +20,13 @@ export const authController = {
   },
 
   me: (req, res) => res.json(toUserDTO(req.user, { includeEmail: true })),
+
+  verifyEmail: async (req, res) => {
+    res.json(await emailVerificationService.verify(req.user, req.valid.body.code));
+  },
+
+  resendVerification: async (req, res) => {
+    await emailVerificationService.sendCode(req.user);
+    res.status(204).end();
+  },
 };

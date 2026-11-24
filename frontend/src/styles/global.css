@@ -583,3 +583,6 @@ textarea { resize: vertical; }
   .switch__label { font-size: 0; gap: 0; }
   .switch__label svg { width: 18px; height: 18px; }
 }
+
+/* Botão com aparência de link (ex.: "Sair e cadastrar de novo") */
+.link { background: none; border: 0; padding: 0; color: var(--gold-soft); text-decoration: underline; cursor: pointer; font: inherit; }

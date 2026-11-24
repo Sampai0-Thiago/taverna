@@ -5,7 +5,7 @@ export const availabilityRepository = {
     const { rows } = await query(
       `SELECT user_id, date, status, note
          FROM availabilities
-        WHERE date BETWEEN $1 AND $2
+        WHERE date BETWEEN ? AND ?
         ORDER BY date`,
       [from, to],
     );
@@ -17,13 +17,12 @@ export const availabilityRepository = {
     return withTransaction(async (client) => {
       for (const { date, status, note } of entries) {
         if (status === null) {
-          await client.query('DELETE FROM availabilities WHERE user_id = $1 AND date = $2', [userId, date]);
+          await client.query('DELETE FROM availabilities WHERE user_id = ? AND date = ?', [userId, date]);
         } else {
           await client.query(
             `INSERT INTO availabilities (user_id, date, status, note)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (user_id, date)
-             DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note`,
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note)`,
             [userId, date, status, note ?? null],
           );
         }

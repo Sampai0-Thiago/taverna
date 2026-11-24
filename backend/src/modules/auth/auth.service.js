@@ -5,6 +5,7 @@ import { conflict, forbidden, unauthorized } from '../../utils/errors.js';
 import { toUserDTO } from '../users/users.mapper.js';
 import { usersRepository } from '../users/users.repository.js';
 import { BCRYPT_ROUNDS } from '../users/users.service.js';
+import { emailVerificationService } from './emailVerification.service.js';
 import { signToken } from './token.js';
 
 // Hash fictício: mantém o tempo de resposta igual quando o e-mail não existe (evita enumeração).
@@ -28,6 +29,7 @@ export const authService = {
 
     // Todo cadastro começa como jogador; o modo mestre é ativado depois, com o MASTER_TOKEN.
     const user = await usersRepository.create({ name, email, passwordHash, color });
+    await emailVerificationService.sendCodeOnRegister(user);
 
     return { user: toUserDTO(user, { includeEmail: true }), token: signToken(user) };
   },

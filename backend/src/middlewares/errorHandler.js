@@ -9,12 +9,14 @@ const MULTER_MESSAGES = {
   LIMIT_UNEXPECTED_FILE: [400, 'Campo de arquivo inesperado.'],
 };
 
-// Códigos de erro do PostgreSQL → resposta HTTP
-const PG_ERRORS = {
-  23505: [409, 'Registro duplicado.', 'CONFLICT'],
-  23503: [400, 'Referência a um registro inexistente.', 'INVALID_REFERENCE'],
-  23514: [422, 'Valor fora das regras permitidas.', 'VALIDATION_ERROR'],
-  '22P02': [400, 'Identificador inválido.', 'BAD_REQUEST'],
+// Códigos de erro do TiDB/MySQL → resposta HTTP
+const DB_ERRORS = {
+  ER_DUP_ENTRY: [409, 'Registro duplicado.', 'CONFLICT'],
+  ER_NO_REFERENCED_ROW_2: [400, 'Referência a um registro inexistente.', 'INVALID_REFERENCE'],
+  ER_ROW_IS_REFERENCED_2: [409, 'Registro em uso por outros dados.', 'CONFLICT'],
+  ER_CHECK_CONSTRAINT_VIOLATED: [422, 'Valor fora das regras permitidas.', 'VALIDATION_ERROR'],
+  ER_DATA_TOO_LONG: [422, 'Valor longo demais.', 'VALIDATION_ERROR'],
+  ER_TRUNCATED_WRONG_VALUE: [400, 'Valor inválido.', 'BAD_REQUEST'],
 };
 
 export function notFoundHandler(req, res) {
@@ -35,8 +37,8 @@ export async function errorHandler(err, req, res, _next) {
     const [s, message] = MULTER_MESSAGES[err.code] ?? [400, err.message];
     status = s;
     body = { code: err.code, message };
-  } else if (err?.code && PG_ERRORS[err.code]) {
-    const [s, message, code] = PG_ERRORS[err.code];
+  } else if (err?.code && DB_ERRORS[err.code]) {
+    const [s, message, code] = DB_ERRORS[err.code];
     status = s;
     body = { code, message };
   } else if (err?.type === 'entity.parse.failed') {
