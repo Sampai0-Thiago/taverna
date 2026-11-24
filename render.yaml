@@ -1,0 +1,54 @@
+# Blueprint do Render para a API (backend).
+# Render → New → Blueprint → escolha este repositório. Os valores marcados com
+# "sync: false" são pedidos na criação (preencha com os dados do TiDB, R2 e Brevo).
+services:
+  - type: web
+    name: gremad-api            # vira https://gremad-api.onrender.com (ajuste o frontend/vercel.json se mudar)
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: America/Sao_Paulo
+      - key: APP_NAME
+        value: GREMAD
+      # Domínio do frontend na Vercel (ex.: https://gremad.vercel.app)
+      - key: CORS_ORIGIN
+        sync: false
+
+      # Segredos
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MASTER_TOKEN
+        sync: false
+      - key: INVITE_CODE
+        sync: false
+
+      # Banco — TiDB Cloud: mysql://USUARIO:SENHA@HOST:4000/gremad
+      - key: DATABASE_URL
+        sync: false
+
+      # E-mail — Brevo (API HTTP; o Render grátis bloqueia portas SMTP)
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+      # Uploads — Cloudflare R2 (o disco do Render grátis é apagado a cada reinício)
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false

@@ -7,6 +7,8 @@ export const authApi = {
   login: (data) => http.post('/auth/login', data),
   register: (data) => http.post('/auth/register', data),
   logout: () => http.post('/auth/logout'),
+  verifyEmail: (code) => http.post('/auth/verify-email', { code }),
+  resendVerification: () => http.post('/auth/resend-verification'),
 };
 
 export const usersApi = {

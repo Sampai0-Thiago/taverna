@@ -39,7 +39,13 @@ Objeto **UserRef** (embutido em vários recursos): `{ id, name, color, avatarUrl
 | POST | `/auth/register` | `{ name, email, password (≥8), color?, inviteCode? }` | 201 `User` + cookie. Todos começam como `player`. |
 | POST | `/auth/login` | `{ email, password }` | 200 `User` + cookie |
 | POST | `/auth/logout` | — | 204, apaga o cookie |
-| GET | `/auth/me` | — | `User` logado |
+| GET | `/auth/me` | — | `User` logado (funciona mesmo sem e-mail confirmado) |
+| POST | `/auth/verify-email` | `{ code }` (6 dígitos) | 200 `User` com `emailVerified: true`. 400 código errado/expirado, 429 tentativas esgotadas |
+| POST | `/auth/resend-verification` | — | 204 (novo código enviado). 429 com `details.retryAfter` (s) se pedir antes de 60 s |
+
+> **Confirmação de e-mail:** o cadastro já faz login, mas enquanto `emailVerified` for `false`
+> todas as rotas autenticadas (exceto as três acima e `/auth/logout`) respondem
+> `403 { code: "EMAIL_NOT_VERIFIED" }`.
 
 `User`: `{ id, name, email, role: "master"|"player", masterSince, bio, color, avatarUrl, diceEnabled, createdAt }` (o `email` só aparece para o próprio usuário). `role` é calculado: `master` enquanto o usuário tiver ativado o modo mestre com o `MASTER_TOKEN` vigente.
 

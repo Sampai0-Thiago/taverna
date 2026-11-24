@@ -4,13 +4,15 @@ import { logger } from './config/logger.js';
 import { runMigrations } from './db/migrate.js';
 import { pool } from './db/pool.js';
 import { fileStorage } from './storage/fileStorage.js';
+import { mailer } from './mail/mailer.js';
 
 async function bootstrap() {
   await fileStorage.init();
   await runMigrations({ log: (msg) => logger.info(msg) });
+  await mailer.verify();
 
   const server = createApp().listen(env.port, () => {
-    logger.info(`🎲 API Ordem do Chaos em http://localhost:${env.port}`);
+    logger.info(`🎲 API Gremad em http://localhost:${env.port}`);
   });
 
   // Encerramento gracioso (Docker/K8s enviam SIGTERM)

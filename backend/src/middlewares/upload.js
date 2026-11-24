@@ -70,6 +70,8 @@ export function uploadFields(fields) {
           req.uploaded[file.fieldname] = file.filename;
           req.uploaded[`${file.fieldname}OriginalName`] = file.originalname;
         }
+        // Só depois de validar tudo: envia ao armazenamento definitivo (R2 ou disco)
+        await Promise.all(files.map((f) => fileStorage.persist(f.filename)));
         next();
       } catch (error) {
         await fileStorage.removeMany(files.map((f) => f.filename));

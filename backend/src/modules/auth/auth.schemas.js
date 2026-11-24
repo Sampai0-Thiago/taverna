@@ -11,6 +11,12 @@ export const registerSchema = z
   })
   .strict();
 
+export const verifyEmailSchema = z
+  .object({
+    code: z.string().trim().regex(/^\d{6}$/, 'O código tem 6 dígitos'),
+  })
+  .strict();
+
 export const loginSchema = z
   .object({
     email: z.string().trim().toLowerCase().email('E-mail inválido'),

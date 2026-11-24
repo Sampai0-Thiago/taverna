@@ -13,7 +13,7 @@ export function toUserDTO(row, { includeEmail = false } = {}) {
   return {
     id: row.id,
     name: row.name,
-    ...(includeEmail ? { email: row.email } : {}),
+    ...(includeEmail ? { email: row.email, emailVerified: !!row.email_verified_at } : {}),
     role: roleOf(row),
     masterSince: roleOf(row) === 'master' ? row.master_since : null,
     bio: row.bio,

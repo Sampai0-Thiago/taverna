@@ -31,7 +31,7 @@ export function AuthPage({ mode }) {
       <form className="auth__card panel" onSubmit={submit} noValidate>
         <div className="auth__brand">
           <Logo size={56} />
-          <h1>Ordem do Chaos</h1>
+          <h1>GREMAD</h1>
           <p className="muted">{isRegister ? 'Junte-se à mesa' : 'Bem-vindo de volta, aventureiro'}</p>
         </div>
 

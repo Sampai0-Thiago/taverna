@@ -10,10 +10,10 @@ Formato curto: contexto → decisão → consequências.
 **Decisão.** Cada pasta tem seu próprio `package.json` (`"type": "module"`), Dockerfile e scripts. Nada é compartilhado por import entre elas.
 **Consequências.** Deploy independente; contrato entre elas é só a API REST documentada em `API.md`.
 
-## ADR-002 — PostgreSQL com SQL puro (sem ORM)
+## ADR-002 — SQL puro (sem ORM) — banco: TiDB Cloud (antes PostgreSQL)
 
 **Contexto.** Domínio pequeno, mas com regras de integridade (unicidade sem caixa, estados da Taverna, upserts).
-**Decisão.** PostgreSQL + driver `pg`, repositórios com SQL parametrizado e migrações `.sql` versionadas.
+**Decisão.** Repositórios com SQL parametrizado e migrações `.sql` versionadas. Começou em PostgreSQL + `pg`; migrado para **TiDB Cloud + `mysql2`** (banco gerenciado, plano gratuito). Na migração: UUIDs gerados na aplicação, `ON DUPLICATE KEY UPDATE` no lugar de `ON CONFLICT`, `ON UPDATE CURRENT_TIMESTAMP` no lugar de triggers e sem `RETURNING` (insere e relê pelo id).
 **Consequências.** Restrições ficam no banco (CHECK, FK, índices de expressão), sem mágica de ORM; o SQL é revisável. Em troca, escrevemos o mapeamento linha → DTO à mão (arquivos `*.mapper.js` / funções `to*DTO`).
 
 ## ADR-003 — Arquitetura em camadas por módulo de domínio
@@ -76,3 +76,15 @@ Formato curto: contexto → decisão → consequências.
 **Contexto.** O pedido descreve uma mesa ("Ordem do Chaos").
 **Decisão.** Todos os usuários cadastrados pertencem ao mesmo grupo; `INVITE_CODE` fecha o cadastro.
 **Consequências.** Modelo simples. Para várias mesas, adicionar `campaigns` + `campaign_members` e um `campaign_id` nas tabelas de domínio (ver Roadmap).
+
+## ADR-014 — Confirmação de e-mail por código numérico
+
+**Contexto.** Evitar cadastros com e-mail digitado errado ou de terceiros.
+**Decisão.** No cadastro a API envia (SMTP/Nodemailer) um código de 6 dígitos. A conta já fica logada, mas só acessa `/auth/me`, `/auth/verify-email`, `/auth/resend-verification` e `/auth/logout` até confirmar. O banco guarda apenas o HMAC-SHA256 do código; validade de 15 min, 5 tentativas por código, reenvio a cada 60 s e rate limit por IP.
+**Consequências.** Código é mais fácil no celular do que link (não depende de abrir o e-mail no mesmo aparelho). Em desenvolvimento sem SMTP o código aparece no log da API; em produção `SMTP_HOST` é obrigatório.
+
+## ADR-015 — Deploy: Vercel (frontend) + Render (API) + Cloudflare R2 + Brevo
+
+**Contexto.** Grupo de 5–7 pessoas, custo zero. O Render grátis apaga o disco a cada reinício e bloqueia portas SMTP.
+**Decisão.** Frontend na Vercel com *rewrite* de `/api/*` para o Render (mesma origem, cookie httpOnly sem mudanças). Uploads no **Cloudflare R2** (driver em `fileStorage.js`, servidos pela própria API para manter o acesso só a membros). E-mail pela **API HTTP do Brevo** (SMTP fica como alternativa).
+**Consequências.** Tudo no plano grátis. A API "dorme" sem uso (primeiro acesso lento). Arquivos passam pela API ao serem baixados (simples e privado; para muito tráfego, trocar por URLs pré-assinadas).
