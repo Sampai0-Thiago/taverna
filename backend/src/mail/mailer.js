@@ -3,17 +3,54 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 
 /**
- * Envio de e-mails via SMTP (Gmail, Outlook, Zoho, Brevo, etc. — veja o README).
- * Sem SMTP configurado (só fora de produção), o conteúdo vai para o log em vez de ser enviado.
+ * Envio de e-mails. Provedores (ver env.mail):
+ *   - brevo: API HTTP do Brevo (https). Funciona no Render grátis, que bloqueia portas SMTP.
+ *   - smtp:  Nodemailer (Gmail com senha de app, Outlook…).
+ *   - sem configuração (só fora de produção): o conteúdo vai para o log.
  */
-const transport = env.mail
-  ? nodemailer.createTransport({
-      host: env.mail.host,
-      port: env.mail.port,
-      secure: env.mail.secure,
-      auth: env.mail.auth,
-    })
-  : null;
+const BREVO_API = 'https://api.brevo.com/v3';
+
+function createBrevoTransport({ apiKey, from }) {
+  const call = async (path, init = {}) => {
+    const res = await fetch(`${BREVO_API}${path}`, {
+      ...init,
+      headers: { 'api-key': apiKey, accept: 'application/json', 'content-type': 'application/json', ...init.headers },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Brevo respondeu ${res.status}: ${body.slice(0, 300)}`);
+    }
+    return res.status === 204 ? null : res.json().catch(() => null);
+  };
+
+  return {
+    label: 'Brevo (API)',
+    verify: () => call('/account'),
+    send: ({ to, toName, subject, text, html }) =>
+      call('/smtp/email', {
+        method: 'POST',
+        body: JSON.stringify({
+          sender: { name: env.appName, email: from },
+          to: [{ email: to, ...(toName ? { name: toName } : {}) }],
+          subject,
+          textContent: text,
+          htmlContent: html,
+        }),
+      }),
+  };
+}
+
+function createSmtpTransport({ host, port, secure, auth, from }) {
+  const transport = nodemailer.createTransport({ host, port, secure, auth, connectionTimeout: 15_000 });
+  return {
+    label: `SMTP ${host}:${port}`,
+    verify: () => transport.verify(),
+    send: ({ to, subject, text, html }) => transport.sendMail({ from: `"${env.appName}" <${from}>`, to, subject, text, html }),
+  };
+}
+
+const transport = !env.mail ? null : env.mail.provider === 'brevo' ? createBrevoTransport(env.mail) : createSmtpTransport(env.mail);
 
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -23,17 +60,17 @@ export const mailer = {
     return transport !== null;
   },
 
-  /** Confere usuário/senha/servidor SMTP na inicialização (não impede a API de subir). */
+  /** Confere as credenciais na inicialização (não impede a API de subir). */
   async verify() {
     if (!transport) {
-      logger.warn('SMTP não configurado: códigos de confirmação serão exibidos apenas no log.');
+      logger.warn('E-mail não configurado: códigos de confirmação serão exibidos apenas no log.');
       return;
     }
     try {
       await transport.verify();
-      logger.info(`✉️  SMTP pronto (${env.mail.host}:${env.mail.port})`);
+      logger.info(`✉️  E-mail pronto (${transport.label})`);
     } catch (error) {
-      logger.error({ err: error }, 'SMTP: falha ao autenticar — confira SMTP_HOST/SMTP_USER/SMTP_PASS');
+      logger.error({ err: error }, `E-mail: falha ao validar ${transport.label} — confira as credenciais`);
     }
   },
 
@@ -56,9 +93,9 @@ export const mailer = {
       </div>`;
 
     if (!transport) {
-      logger.warn({ to, code }, '✉️  [SMTP desligado] código de confirmação');
+      logger.warn({ to, code }, '✉️  [e-mail desligado] código de confirmação');
       return;
     }
-    await transport.sendMail({ from: `"${env.appName}" <${env.mail.from}>`, to, subject, text, html });
+    await transport.send({ to, toName: name, subject, text, html });
   },
 };

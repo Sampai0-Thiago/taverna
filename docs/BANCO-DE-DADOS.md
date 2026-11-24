@@ -134,13 +134,12 @@ Todas as tabelas têm `created_at`; as editáveis também têm `updated_at`, man
 ## Migrações
 
 - Arquivos `NNN_descricao.sql` em `backend/src/db/migrations/`, aplicados em ordem alfabética.
-- Cada um roda numa transação e é registrado em `schema_migrations` — rodar de novo não faz nada.
+- Cada um é registrado em `schema_migrations` — rodar de novo não faz nada. No TiDB/MySQL, DDL faz commit implícito: se uma migração falhar no meio, desfaça manualmente o que já foi criado.
 - A API aplica migrações pendentes ao iniciar; também é possível rodar `npm run migrate`.
 - **Nunca edite uma migração já aplicada**: crie `002_…sql`.
 
 ## Backup
 
-```bash
-docker compose exec db pg_dump -U chaos ordem_do_chaos > backup.sql
-# e copie também o volume "uploads" (imagens e PDFs)
-```
+- **TiDB Cloud:** o plano Starter faz backups automáticos (veja *Backup* no painel do cluster). Para uma cópia própria:
+  `mysqldump -h HOST -P 4000 -u USUARIO -p --ssl-mode=VERIFY_IDENTITY gremad > backup.sql`
+- **Arquivos:** ficam no bucket do Cloudflare R2 (ou no volume `uploads`, sem R2).

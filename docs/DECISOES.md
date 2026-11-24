@@ -82,3 +82,9 @@ Formato curto: contexto → decisão → consequências.
 **Contexto.** Evitar cadastros com e-mail digitado errado ou de terceiros.
 **Decisão.** No cadastro a API envia (SMTP/Nodemailer) um código de 6 dígitos. A conta já fica logada, mas só acessa `/auth/me`, `/auth/verify-email`, `/auth/resend-verification` e `/auth/logout` até confirmar. O banco guarda apenas o HMAC-SHA256 do código; validade de 15 min, 5 tentativas por código, reenvio a cada 60 s e rate limit por IP.
 **Consequências.** Código é mais fácil no celular do que link (não depende de abrir o e-mail no mesmo aparelho). Em desenvolvimento sem SMTP o código aparece no log da API; em produção `SMTP_HOST` é obrigatório.
+
+## ADR-015 — Deploy: Vercel (frontend) + Render (API) + Cloudflare R2 + Brevo
+
+**Contexto.** Grupo de 5–7 pessoas, custo zero. O Render grátis apaga o disco a cada reinício e bloqueia portas SMTP.
+**Decisão.** Frontend na Vercel com *rewrite* de `/api/*` para o Render (mesma origem, cookie httpOnly sem mudanças). Uploads no **Cloudflare R2** (driver em `fileStorage.js`, servidos pela própria API para manter o acesso só a membros). E-mail pela **API HTTP do Brevo** (SMTP fica como alternativa).
+**Consequências.** Tudo no plano grátis. A API "dorme" sem uso (primeiro acesso lento). Arquivos passam pela API ao serem baixados (simples e privado; para muito tráfego, trocar por URLs pré-assinadas).

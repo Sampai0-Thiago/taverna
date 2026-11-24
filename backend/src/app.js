@@ -16,6 +16,8 @@ import { mediaRoutes } from './modules/media/media.routes.js';
 import { sessionsRoutes } from './modules/sessions/sessions.routes.js';
 import { tavernRoutes } from './modules/tavern/tavern.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
+import { fileStorage } from './storage/fileStorage.js';
+import { notFound } from './utils/errors.js';
 
 /**
  * Monta a aplicação Express (sem abrir porta) — facilita testes de integração.
@@ -24,7 +26,7 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', 1); // atrás do nginx/reverse proxy
+  app.set('trust proxy', env.trustProxy); // atrás do nginx/Render/Vercel
 
   // A API só serve JSON e arquivos; CSP fica a cargo do servidor do frontend.
   // (CSP com object-src 'none' impediria o visualizador de PDF do navegador.)
@@ -51,9 +53,13 @@ export function createApp() {
   api.use('/media', mediaRoutes);
   api.use('/tavern', tavernRoutes);
   api.use('/dice', diceRoutes);
-  // Arquivos enviados (imagens/PDFs): só membros logados acessam.
-  // Nomes são UUIDs imutáveis → cache longo é seguro.
-  api.use('/files', express.static(env.uploadDir, { index: false, dotfiles: 'deny', maxAge: '7d', immutable: true }));
+  // Arquivos enviados (imagens/PDFs): só membros logados acessam (disco local ou Cloudflare R2).
+  api.get('/files/:name', async (req, res) => {
+    const { name } = req.params;
+    if (!fileStorage.isValidName(name) || !(await fileStorage.send(name, req, res))) {
+      throw notFound('Arquivo não encontrado');
+    }
+  });
   app.use('/api', api);
 
   app.use(notFoundHandler);

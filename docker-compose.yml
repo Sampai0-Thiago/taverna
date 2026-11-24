@@ -15,11 +15,16 @@ services:
       MAX_UPLOAD_MB: 15
       INVITE_CODE: ${INVITE_CODE:-}
       MASTER_TOKEN: ${MASTER_TOKEN:?defina MASTER_TOKEN no arquivo .env}
-      SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST no arquivo .env}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       TZ: America/Sao_Paulo
     volumes:
       - uploads:/app/uploads # imagens e PDFs persistem entre deploys
