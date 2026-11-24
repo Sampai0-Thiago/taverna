@@ -10,7 +10,7 @@ async function bootstrap() {
   await runMigrations({ log: (msg) => logger.info(msg) });
 
   const server = createApp().listen(env.port, () => {
-    logger.info(`🎲 API Ordem do Chaos em http://localhost:${env.port}`);
+    logger.info(`🎲 API Gremad em http://localhost:${env.port}`);
   });
 
   // Encerramento gracioso (Docker/K8s enviam SIGTERM)
