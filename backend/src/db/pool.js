@@ -1,20 +1,48 @@
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 import { env } from '../config/env.js';
 
-const { Pool, types } = pg;
+/**
+ * Conexão com o TiDB (compatível com o protocolo MySQL).
+ *
+ * - Datas/horas trafegam em UTC (`timezone: 'Z'` + `time_zone` da sessão), como no PostgreSQL.
+ * - Colunas DATE chegam como string 'YYYY-MM-DD' — evita deslocamento de fuso horário.
+ * - TINYINT(1) (BOOLEAN) vira true/false.
+ * - TiDB Cloud exige TLS: ver `env.database.ssl`.
+ */
+function typeCast(field, next) {
+  if (field.type === 'TINY' && field.length === 1) {
+    const value = field.string();
+    return value === null ? null : value === '1';
+  }
+  return next();
+}
 
-// Colunas DATE (OID 1082) chegam como string 'YYYY-MM-DD' — evita deslocamento de fuso horário.
-types.setTypeParser(1082, (value) => value);
-
-export const pool = new Pool({
-  connectionString: env.databaseUrl,
-  max: 10,
-  idleTimeoutMillis: 30_000,
+export const pool = mysql.createPool({
+  ...env.database,
+  waitForConnections: true,
+  connectionLimit: 10,
+  maxIdle: 10,
+  idleTimeout: 30_000,
+  enableKeepAlive: true,
+  timezone: 'Z',
+  dateStrings: ['DATE'],
+  typeCast,
+  charset: 'utf8mb4',
 });
 
-/** Executa uma query parametrizada (nunca concatene valores em SQL). */
-export function query(text, params = []) {
-  return pool.query(text, params);
+pool.on('connection', (conn) => {
+  conn.query("SET time_zone = '+00:00'");
+});
+
+/** Normaliza o retorno do mysql2 para { rows, rowCount } (mesmo formato usado pelos repositórios). */
+function normalize([result]) {
+  if (Array.isArray(result)) return { rows: result, rowCount: result.length };
+  return { rows: [], rowCount: result.affectedRows, insertId: result.insertId };
+}
+
+/** Executa uma query parametrizada com placeholders `?` (nunca concatene valores em SQL). */
+export async function query(text, params = []) {
+  return normalize(await pool.query(text, params));
 }
 
 /**
@@ -22,16 +50,17 @@ export function query(text, params = []) {
  * Faz COMMIT em caso de sucesso e ROLLBACK em qualquer erro.
  */
 export async function withTransaction(work) {
-  const client = await pool.connect();
+  const conn = await pool.getConnection();
+  const client = { query: async (text, params = []) => normalize(await conn.query(text, params)) };
   try {
-    await client.query('BEGIN');
+    await conn.beginTransaction();
     const result = await work(client);
-    await client.query('COMMIT');
+    await conn.commit();
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    await conn.rollback();
     throw error;
   } finally {
-    client.release();
+    conn.release();
   }
 }

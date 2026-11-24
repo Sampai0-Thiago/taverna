@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { query } from '../../db/pool.js';
 
 const SELECT = `
@@ -6,23 +7,24 @@ const SELECT = `
 
 export const diceRepository = {
   async insert({ userId, expression, mode, detail, total, context }) {
-    const { rows } = await query(
-      `INSERT INTO dice_rolls (user_id, expression, mode, detail, total, context)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [userId, expression, mode, JSON.stringify(detail), total, context ?? null],
+    const id = randomUUID();
+    await query(
+      `INSERT INTO dice_rolls (id, user_id, expression, mode, detail, total, context)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, userId, expression, mode, JSON.stringify(detail), total, context ?? null],
     );
-    return this.findById(rows[0].id);
+    return this.findById(id);
   },
 
   async findById(id) {
-    const { rows } = await query(`${SELECT} WHERE r.id = $1`, [id]);
+    const { rows } = await query(`${SELECT} WHERE r.id = ?`, [id]);
     return rows[0] ?? null;
   },
 
   async recent(limit, after) {
     const { rows } = after
-      ? await query(`${SELECT} WHERE r.created_at > $2::timestamptz ORDER BY r.created_at DESC LIMIT $1`, [limit, after])
-      : await query(`${SELECT} ORDER BY r.created_at DESC LIMIT $1`, [limit]);
+      ? await query(`${SELECT} WHERE r.created_at > ? ORDER BY r.created_at DESC LIMIT ?`, [new Date(after), limit])
+      : await query(`${SELECT} ORDER BY r.created_at DESC LIMIT ?`, [limit]);
     return rows;
   },
 };

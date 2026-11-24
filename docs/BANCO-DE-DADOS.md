@@ -1,6 +1,8 @@
 # Banco de dados
 
-PostgreSQL 16 (compatível com 13+). Esquema em [`backend/src/db/migrations/`](../backend/src/db/migrations/): `001_initial_schema.sql` e `002_master_token.sql` (troca a coluna fixa `role` pelo modo mestre via token).
+**TiDB Cloud** (compatível com MySQL 8; também roda em MySQL 8.0+). Esquema em [`backend/src/db/migrations/`](../backend/src/db/migrations/): `001_initial_schema.sql` e `002_email_verification.sql` (coluna `users.email_verified_at` + tabela `email_verifications`, com o HMAC do código, validade, tentativas e último envio).
+
+IDs são UUIDs gerados pela aplicação (`crypto.randomUUID()`) em `CHAR(36)`. Datas/horas são `DATETIME(3)` em UTC (a conexão fixa `time_zone = '+00:00'`); colunas `DATE` trafegam como texto `YYYY-MM-DD`.
 
 ## Modelo entidade-relacionamento
 
@@ -90,19 +92,22 @@ erDiagram
   }
 ```
 
-Todas as tabelas têm `created_at`; as editáveis também têm `updated_at`, mantido por trigger (`set_updated_at`).
+Todas as tabelas têm `created_at`; as editáveis também têm `updated_at`, mantido pelo próprio banco (`ON UPDATE CURRENT_TIMESTAMP(3)`; o TiDB não tem triggers).
 
 ## Integridade garantida pelo banco
 
 | Regra | Como |
 | ----- | ---- |
-| E-mail único sem diferenciar maiúsculas | `UNIQUE INDEX users_email_unique ON users (lower(email))` |
+| E-mail único sem diferenciar maiúsculas | a API grava o e-mail em minúsculas + `UNIQUE KEY users_email_unique (email)` |
 | Uma marcação por pessoa por dia | `PRIMARY KEY (user_id, date)` em `availabilities` |
 | Valores de enum válidos | `CHECK (status IN (…))` em todas as colunas de status/tipo |
-| Cor válida | `CHECK (color ~ '^#[0-9A-Fa-f]{6}$')` |
+| Cor válida | `CHECK (color REGEXP '^#[0-9A-Fa-f]{6}$')` |
 | Modo mestre coerente | `CHECK ((master_token_fp IS NULL) = (master_since IS NULL))` |
-| Item da Taverna coerente | `CHECK ((status = 'open' AND assigned_to IS NULL) OR (status <> 'open' AND assigned_to IS NOT NULL))` |
-| Marcador dentro da imagem | `CHECK (x BETWEEN 0 AND 100)` e idem para `y` |
+| Item da Taverna coerente | máquina de estados em `tavern.rules.js` + UPDATE condicional (concorrência otimista) |
+| Marcador dentro da imagem | `CHECK (x BETWEEN 0 AND 100 AND y BETWEEN 0 AND 100)` |
+
+> No TiDB, os `CHECK` só são aplicados com `SET GLOBAL tidb_enable_check_constraint = ON`. Sem isso eles ficam
+> só como documentação — as mesmas regras já são validadas na API (Zod + regras de domínio).
 
 ## Exclusões em cascata
 
@@ -111,7 +116,7 @@ Todas as tabelas têm `created_at`; as editáveis também têm `updated_at`, man
 | um usuário | apaga disponibilidade, personagens e rolagens; sessões/mídias/itens ficam com autor `NULL` |
 | uma sessão | apaga os itens da Taverna dela |
 | um mapa | apaga seus marcadores |
-| alguém responsável por item | trigger `users_release_tavern_items` devolve o item para `open` |
+| alguém responsável por item | `assigned_to` vira `NULL`. Sem triggers no TiDB, ao excluir uma conta manualmente rode antes `UPDATE tavern_items SET status = 'open', assigned_to = NULL WHERE assigned_to = '<id>'` |
 
 ## Índices
 
