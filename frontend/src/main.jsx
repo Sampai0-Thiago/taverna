@@ -6,6 +6,13 @@ import { App } from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { DiceProvider } from './context/DiceContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
+// Fontes hospedadas no próprio site (sem Google Fonts): a visita não envia o IP do usuário a terceiros.
+import '@fontsource/cinzel/500.css';
+import '@fontsource/cinzel/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 import './styles/global.css';
 
 const queryClient = new QueryClient({

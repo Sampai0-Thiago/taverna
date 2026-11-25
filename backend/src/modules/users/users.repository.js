@@ -13,7 +13,7 @@ export const usersRepository = {
 
   /** E-mails são gravados em minúsculas (ver create), então a busca compara em minúsculas também. */
   async findByEmailWithHash(email) {
-    const { rows } = await query(`SELECT ${PUBLIC_COLUMNS}, password_hash FROM users WHERE email = ?`, [
+    const { rows } = await query(`SELECT ${PUBLIC_COLUMNS}, password_hash, failed_logins, locked_until FROM users WHERE email = ?`, [
       email.toLowerCase(),
     ]);
     return rows[0] ?? null;
@@ -34,12 +34,12 @@ export const usersRepository = {
     return rows;
   },
 
-  async create({ name, email, passwordHash, color }) {
+  async create({ name, email, passwordHash, color, privacyVersion }) {
     const id = randomUUID();
     await query(
-      `INSERT INTO users (id, name, email, password_hash, color)
-       VALUES (?, ?, ?, ?, COALESCE(?, '#8B5CF6'))`,
-      [id, name, email.toLowerCase(), passwordHash, color ?? null],
+      `INSERT INTO users (id, name, email, password_hash, color, privacy_accepted_at, privacy_version)
+       VALUES (?, ?, ?, ?, COALESCE(?, '#8B5CF6'), ?, ?)`,
+      [id, name, email.toLowerCase(), passwordHash, color ?? null, new Date(), privacyVersion],
     );
     return this.findById(id);
   },
@@ -57,6 +57,8 @@ export const usersRepository = {
       passwordHash: 'password_hash',
       emailVerifiedAt: 'email_verified_at',
       passwordChangedAt: 'password_changed_at',
+      failedLogins: 'failed_logins',
+      lockedUntil: 'locked_until',
     };
     const sets = [];
     const values = [];

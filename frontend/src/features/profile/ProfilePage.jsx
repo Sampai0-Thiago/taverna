@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Crown, Dices, KeyRound, LogOut } from 'lucide-react';
+import { Camera, Crown, Dices, Download, KeyRound, LogOut, ShieldCheck, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { qk, usersApi } from '../../api/endpoints.js';
 import { Avatar, Field, PageHeader, Switch } from '../../components/ui/index.jsx';
@@ -73,6 +74,80 @@ function PasswordForm() {
       <Field label="Nova senha" hint="Mínimo de 8 caracteres"><input type="password" autoComplete="new-password" minLength={8} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} required /></Field>
       <div className="form__actions"><button className="btn btn--ghost" disabled={change.isPending}>Alterar</button></div>
     </form>
+  );
+}
+
+/**
+ * LGPD (art. 18): a pessoa baixa todos os seus dados ou exclui a conta sem depender de ninguém.
+ * A exclusão pede a senha e uma confirmação explícita (é irreversível).
+ */
+function MyDataCard() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [sure, setSure] = useState(false);
+  const remove = useMutation({
+    mutationFn: usersApi.deleteMe,
+    onSuccess: () => {
+      // Primeiro marca como deslogado (as rotas protegidas reagem), depois descarta o resto do cache.
+      queryClient.setQueryData(qk.me, null);
+      queryClient.removeQueries({ predicate: (q) => JSON.stringify(q.queryKey) !== JSON.stringify(qk.me) });
+      toast.success('Sua conta e seus dados foram excluídos.');
+      navigate('/entrar', { replace: true });
+    },
+  });
+
+  return (
+    <section className="panel form">
+      <h2><ShieldCheck size={18} aria-hidden /> Meus dados</h2>
+      <p className="muted">
+        Você pode baixar uma cópia de tudo o que guardamos sobre você ou excluir sua conta.{' '}
+        <Link to="/privacidade">Política de Privacidade</Link>
+      </p>
+      <div className="form__actions form__actions--start">
+        <a className="btn btn--ghost" href={usersApi.exportUrl} download>
+          <Download size={16} aria-hidden /> Baixar meus dados
+        </a>
+        {!open && (
+          <button type="button" className="btn btn--danger" onClick={() => setOpen(true)}>
+            <Trash2 size={16} aria-hidden /> Excluir minha conta
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <form
+          className="danger-zone"
+          onSubmit={(e) => {
+            e.preventDefault();
+            remove.mutate(password);
+          }}
+        >
+          <p>
+            <strong>Isto não pode ser desfeito.</strong> Serão apagados seu cadastro, agenda, personagens, fichas, avatar e
+            rolagens. Sessões, mapas e itens da Taverna que você criou continuam para o grupo, sem o seu nome.
+          </p>
+          {remove.error && <div className="alert alert--error">{remove.error.fieldMessage ?? remove.error.message}</div>}
+          <Field label="Confirme sua senha">
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </Field>
+          <label className="check">
+            <input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} />
+            Entendo que minha conta será excluída definitivamente.
+          </label>
+          <div className="form__actions">
+            <button type="button" className="btn btn--ghost" onClick={() => { setOpen(false); setPassword(''); setSure(false); }}>
+              Cancelar
+            </button>
+            <button className="btn btn--danger" disabled={!sure || !password || remove.isPending}>
+              {remove.isPending ? 'Excluindo…' : 'Excluir definitivamente'}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 
@@ -176,6 +251,7 @@ export default function ProfilePage() {
             <p className="muted">Também dá para ligar/desligar pelo switch no topo da tela, a qualquer momento.</p>
           </section>
           <PasswordForm />
+          <MyDataCard />
         </div>
         <div className="profile-layout__col">
           <MembersList />

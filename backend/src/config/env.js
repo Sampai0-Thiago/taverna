@@ -133,4 +133,6 @@ export const env = Object.freeze({
   // Quantos proxies confiáveis há na frente da API (Render = 1; Vercel → Render pode exigir 2).
   trustProxy: Number(process.env.TRUST_PROXY ?? 1),
   appName: process.env.APP_NAME || 'GREMAD',
+  // Canal do titular de dados (LGPD art. 41 / Res. CD/ANPD 2/2022). Padrão: o remetente dos e-mails.
+  privacyContact: process.env.PRIVACY_CONTACT || process.env.MAIL_FROM || process.env.SMTP_USER || null,
 });
