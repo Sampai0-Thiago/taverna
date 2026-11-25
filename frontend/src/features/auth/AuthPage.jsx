@@ -55,6 +55,11 @@ export function AuthPage({ mode }) {
             autoComplete={isRegister ? 'new-password' : 'current-password'}
           />
         </Field>
+        {!isRegister && (
+          <Link to="/recuperar-senha" className="auth__forgot">
+            Esqueceu a senha?
+          </Link>
+        )}
 
         {isRegister && (
           <>

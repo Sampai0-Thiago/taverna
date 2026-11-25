@@ -94,6 +94,8 @@ Todas as respostas de erro têm o mesmo formato:
 - `AppError` (400/401/403/404/409/415/422) → mensagem segura para o usuário.
 - Violações do banco viram respostas HTTP: `ER_DUP_ENTRY` → 409, `ER_NO_REFERENCED_ROW_2` → 400, `ER_CHECK_CONSTRAINT_VIOLATED` → 422.
 - Cadastro exige **confirmação de e-mail**: código de 6 dígitos (`crypto.randomInt`), guardado só como HMAC, válido por 15 min, 5 tentativas, reenvio a cada 60 s. `requireAuth` recusa contas não confirmadas (`403 EMAIL_NOT_VERIFIED`).
+- **Recuperação de senha** com o mesmo esquema de código (HMAC com finalidade própria — um código de confirmação nunca vale como código de recuperação). `/auth/forgot-password` sempre responde 204 e faz o envio em segundo plano, para não revelar quais e-mails têm conta nem pelo conteúdo nem pelo tempo de resposta.
+- **Trocar a senha encerra as outras sessões:** `users.password_changed_at` é comparado com o `iat` do JWT; logins emitidos antes da troca recebem 401. Quem trocou recebe um cookie novo e continua logado.
 - Qualquer outro erro → 500 genérico, com stack apenas no log.
 - Se a requisição falhar **depois** de um upload, os arquivos recém-gravados são apagados (sem lixo no disco nem no R2).
 

@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell.jsx';
 import { Spinner } from './components/ui/index.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import { AuthPage } from './features/auth/AuthPage.jsx';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage.jsx';
 import { VerifyEmailPage } from './features/auth/VerifyEmailPage.jsx';
 
 // Code splitting por rota: cada aba é baixada sob demanda.
@@ -48,6 +49,7 @@ export function App() {
         <Route element={<GuestOnly />}>
           <Route path="/entrar" element={<AuthPage mode="login" />} />
           <Route path="/cadastro" element={<AuthPage mode="register" />} />
+          <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
         </Route>
 
         <Route element={<RequireUnverified />}>

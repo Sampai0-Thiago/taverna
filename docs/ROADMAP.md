@@ -20,7 +20,6 @@
 ## Limitações conhecidas
 
 - **Melhores datas** consideram apenas o mês visível no calendário.
-- Não há recuperação de senha por e-mail (o SMTP já está pronto para isso).
 - Não há tela para excluir conta (só via banco). Ao excluir, devolva antes à lista os itens da Taverna que a pessoa levaria (ver BANCO-DE-DADOS.md).
 - O histórico de dados não é paginado (mostra as 30 últimas rolagens).
 - A agenda usa o fuso do servidor para definir "hoje" — configure `TZ=America/Sao_Paulo`.

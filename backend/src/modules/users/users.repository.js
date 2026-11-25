@@ -3,7 +3,7 @@ import { query } from '../../db/pool.js';
 
 /** Acesso a dados de usuários. Só SQL parametrizado; nenhuma regra de negócio aqui. */
 const PUBLIC_COLUMNS = `id, name, email, bio, color, avatar_file, dice_enabled, master_token_fp, master_since,
-  email_verified_at, created_at`;
+  email_verified_at, password_changed_at, created_at`;
 
 export const usersRepository = {
   async findById(id) {
@@ -56,6 +56,7 @@ export const usersRepository = {
       masterSince: 'master_since',
       passwordHash: 'password_hash',
       emailVerifiedAt: 'email_verified_at',
+      passwordChangedAt: 'password_changed_at',
     };
     const sets = [];
     const values = [];

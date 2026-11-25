@@ -41,6 +41,8 @@ Objeto **UserRef** (embutido em vários recursos): `{ id, name, color, avatarUrl
 | POST | `/auth/logout` | — | 204, apaga o cookie |
 | GET | `/auth/me` | — | `User` logado (funciona mesmo sem e-mail confirmado) |
 | POST | `/auth/verify-email` | `{ code }` (6 dígitos) | 200 `User` com `emailVerified: true`. 400 código errado/expirado, 429 tentativas esgotadas |
+| POST | `/auth/forgot-password` | `{ email }` | 204 sempre (não revela se a conta existe). Se existir, envia um código de 6 dígitos (reenvio no máximo a cada 60 s) |
+| POST | `/auth/reset-password` | `{ email, code, newPassword (≥8) }` | 200 `User` + cookie (já entra logado). Também confirma o e-mail e encerra as sessões de outros aparelhos. 400 código inválido/expirado, 429 tentativas esgotadas |
 | POST | `/auth/resend-verification` | — | 204 (novo código enviado). 429 com `details.retryAfter` (s) se pedir antes de 60 s |
 
 > **Confirmação de e-mail:** o cadastro já faz login, mas enquanto `emailVerified` for `false`
