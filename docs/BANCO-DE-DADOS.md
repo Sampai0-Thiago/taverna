@@ -1,6 +1,6 @@
 # Banco de dados
 
-**TiDB Cloud** (compatível com MySQL 8; também roda em MySQL 8.0+). Esquema em [`backend/src/db/migrations/`](../backend/src/db/migrations/): `001_initial_schema.sql` e `002_email_verification.sql` (coluna `users.email_verified_at` + tabela `email_verifications`, com o HMAC do código, validade, tentativas e último envio).
+**TiDB Cloud** (compatível com MySQL 8; também roda em MySQL 8.0+). Esquema em [`backend/src/db/migrations/`](../backend/src/db/migrations/): `001_initial_schema.sql`, `002_email_verification.sql` (coluna `users.email_verified_at` + tabela `email_verifications`, com o HMAC do código, validade, tentativas e último envio) e `003_password_reset.sql` (tabela `password_resets`, mesmo formato, e coluna `users.password_changed_at`, que invalida logins anteriores à troca de senha).
 
 IDs são UUIDs gerados pela aplicação (`crypto.randomUUID()`) em `CHAR(36)`. Datas/horas são `DATETIME(3)` em UTC (a conexão fixa `time_zone = '+00:00'`); colunas `DATE` trafegam como texto `YYYY-MM-DD`.
 

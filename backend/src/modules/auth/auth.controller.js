@@ -1,6 +1,7 @@
 import { toUserDTO } from '../users/users.mapper.js';
 import { authService } from './auth.service.js';
 import { emailVerificationService } from './emailVerification.service.js';
+import { passwordResetService } from './passwordReset.service.js';
 import { AUTH_COOKIE, cookieOptions } from './token.js';
 
 export const authController = {
@@ -23,6 +24,17 @@ export const authController = {
 
   verifyEmail: async (req, res) => {
     res.json(await emailVerificationService.verify(req.user, req.valid.body.code));
+  },
+
+  /** Sempre 204, exista ou não a conta (não revela quem está cadastrado). */
+  forgotPassword: (req, res) => {
+    passwordResetService.requestResetInBackground(req.valid.body.email);
+    res.status(204).end();
+  },
+
+  resetPassword: async (req, res) => {
+    const { user, token } = await passwordResetService.reset(req.valid.body);
+    res.cookie(AUTH_COOKIE, token, cookieOptions).json(user);
   },
 
   resendVerification: async (req, res) => {
