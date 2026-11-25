@@ -88,3 +88,9 @@ Formato curto: contexto → decisão → consequências.
 **Contexto.** Grupo de 5–7 pessoas, custo zero. O Render grátis apaga o disco a cada reinício e bloqueia portas SMTP.
 **Decisão.** Frontend na Vercel com *rewrite* de `/api/*` para o Render (mesma origem, cookie httpOnly sem mudanças). Uploads no **Cloudflare R2** (driver em `fileStorage.js`, servidos pela própria API para manter o acesso só a membros). E-mail pela **API HTTP do Brevo** (SMTP fica como alternativa).
 **Consequências.** Tudo no plano grátis. A API "dorme" sem uso (primeiro acesso lento). Arquivos passam pela API ao serem baixados (simples e privado; para muito tráfego, trocar por URLs pré-assinadas).
+
+## ADR-016 — LGPD por padrão (privacy by design)
+
+**Contexto.** A aplicação guarda dados pessoais de amigos (nome, e-mail, fotos, agenda). A LGPD exige transparência, necessidade, segurança e meios para o titular exercer seus direitos.
+**Decisão.** Política de Privacidade pública com aceite versionado no cadastro; exportação (JSON) e exclusão de conta self-service; remoção de metadados das imagens; logs sem IP/cabeçalhos; retenção automática; bloqueio por conta; fontes auto-hospedadas e CSP estrita. Detalhes em [LGPD.md](LGPD.md).
+**Consequências.** Nenhuma solicitação de titular depende do administrador para os casos comuns. Imagens são reprocessadas no upload (CPU extra, desprezível para o volume do grupo). O texto da política precisa acompanhar mudanças no tratamento (versão em `config/privacy.js`).

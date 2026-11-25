@@ -41,6 +41,7 @@ Objeto **UserRef** (embutido em vários recursos): `{ id, name, color, avatarUrl
 | POST | `/auth/logout` | — | 204, apaga o cookie |
 | GET | `/auth/me` | — | `User` logado (funciona mesmo sem e-mail confirmado) |
 | POST | `/auth/verify-email` | `{ code }` (6 dígitos) | 200 `User` com `emailVerified: true`. 400 código errado/expirado, 429 tentativas esgotadas |
+| GET | `/legal` | — | `{ controller, contactEmail, policyVersion }` — dados públicos da Política de Privacidade |
 | POST | `/auth/forgot-password` | `{ email }` | 204 sempre (não revela se a conta existe). Se existir, envia um código de 6 dígitos (reenvio no máximo a cada 60 s) |
 | POST | `/auth/reset-password` | `{ email, code, newPassword (≥8) }` | 200 `User` + cookie (já entra logado). Também confirma o e-mail e encerra as sessões de outros aparelhos. 400 código inválido/expirado, 429 tentativas esgotadas |
 | POST | `/auth/resend-verification` | — | 204 (novo código enviado). 429 com `details.retryAfter` (s) se pedir antes de 60 s |
@@ -161,3 +162,13 @@ Notação: `d20`, `2d6+3`, `1d8+1d6-1`, `d%` (= d100). Limites: 10 termos, 100 d
 | Método | Rota | Observação |
 | ------ | ---- | ---------- |
 | GET | `/files/:nome` | Imagens e PDFs enviados. Exige login. Cache de 7 dias (nomes são UUID imutáveis). |
+
+## LGPD — direitos do titular
+
+| Método | Rota | Corpo | Resposta |
+| ------ | ---- | ----- | -------- |
+| GET | `/users/me/export` | — | JSON para download (`Content-Disposition: attachment`) com conta, agenda, personagens, rolagens, sessões, itens, mídias e marcadores do titular. Nunca inclui hashes ou segredos |
+| DELETE | `/users/me` | `{ password }` | 204 e apaga o cookie. Exclui a conta e os arquivos pessoais; conteúdo coletivo fica sem autor. 400 senha incorreta |
+
+`POST /auth/register` passou a exigir `acceptPrivacy: true` (422 sem ele). `POST /auth/login` responde
+`429 ACCOUNT_LOCKED` após 10 senhas erradas seguidas (bloqueio de 15 min; recuperar a senha destrava).

@@ -20,4 +20,6 @@ export const changePasswordSchema = z
   })
   .strict();
 
+export const deleteAccountSchema = z.object({ password: z.string().min(1, 'Informe sua senha') }).strict();
+
 export const activateMasterSchema = z.object({ token: z.string().min(1, 'Informe o token').max(200) }).strict();

@@ -3,10 +3,12 @@ import { bruteForceLimiter } from '../../middlewares/rateLimit.js';
 import { uploadFields } from '../../middlewares/upload.js';
 import { validate } from '../../middlewares/validate.js';
 import { usersController as c } from './users.controller.js';
+import { privacyController } from '../privacy/privacy.controller.js';
 import {
   changePasswordSchema,
   preferencesSchema,
   activateMasterSchema,
+  deleteAccountSchema,
   updateProfileSchema,
   uuidParam,
 } from './users.schemas.js';
@@ -18,6 +20,9 @@ usersRoutes.patch('/me', validate({ body: updateProfileSchema }), c.updateMe);
 usersRoutes.patch('/me/preferences', validate({ body: preferencesSchema }), c.updatePreferences);
 usersRoutes.patch('/me/password', validate({ body: changePasswordSchema }), c.changePassword);
 usersRoutes.put('/me/avatar', uploadFields({ avatar: 'image' }), c.updateAvatar);
+// LGPD (art. 18): baixar todos os meus dados e excluir minha conta
+usersRoutes.get('/me/export', bruteForceLimiter({ limit: 10 }), privacyController.exportMine);
+usersRoutes.delete('/me', bruteForceLimiter({ limit: 10 }), validate({ body: deleteAccountSchema }), privacyController.deleteMine);
 usersRoutes.get('/:id', validate({ params: uuidParam }), c.get);
 // Modo mestre: ativar com o token (com limite de tentativas) e desativar
 usersRoutes.post('/me/master', bruteForceLimiter({ limit: 10 }), validate({ body: activateMasterSchema }), c.activateMaster);

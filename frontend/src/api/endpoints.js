@@ -21,6 +21,13 @@ export const usersApi = {
   uploadAvatar: (file) => http.put('/users/me/avatar', toFormData({ avatar: file })),
   activateMaster: (token) => http.post('/users/me/master', { token }),
   deactivateMaster: () => http.delete('/users/me/master'),
+  /** LGPD: download do JSON com todos os meus dados (link direto, o cookie vai junto). */
+  exportUrl: '/api/users/me/export',
+  deleteMe: (password) => http.delete('/users/me', { password }),
+};
+
+export const legalApi = {
+  get: () => http.get('/legal'),
 };
 
 export const availabilityApi = {

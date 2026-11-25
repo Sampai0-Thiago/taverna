@@ -22,7 +22,7 @@ Todo o código usa **ES Modules** (`"type": "module"`) e frontend/backend ficam 
 
 | # | Requisito | Onde está |
 |---|-----------|-----------|
-| 1 | Cadastro de usuários e perfil | `/cadastro`, `/confirmar-email`, `/entrar`, `/recuperar-senha`, `/perfil` — o cadastro envia um **código de 6 dígitos por e-mail**; o app só libera as abas depois da confirmação (15 min de validade, 5 tentativas, reenvio a cada 60 s). **Esqueceu a senha?** recebe outro código por e-mail e define uma nova senha; trocar a senha encerra as sessões nos outros aparelhos. nome, bio, cor na agenda, avatar, troca de senha. Todos entram como jogador; o **modo mestre** é ativado no Perfil com o **token de mestre** (`MASTER_TOKEN`) e desativado quando outra pessoa for mestrar. Código de convite opcional (`INVITE_CODE`). |
+| 1 | Cadastro de usuários e perfil | `/cadastro`, `/confirmar-email`, `/entrar`, `/recuperar-senha`, `/perfil` — o cadastro envia um **código de 6 dígitos por e-mail**; o app só libera as abas depois da confirmação (15 min de validade, 5 tentativas, reenvio a cada 60 s). **Esqueceu a senha?** recebe outro código por e-mail e define uma nova senha; trocar a senha encerra as sessões nos outros aparelhos. **LGPD:** Política de Privacidade em `/privacidade` (aceite registrado no cadastro) e, no Perfil, *Meus dados* → baixar todos os dados ou excluir a conta. nome, bio, cor na agenda, avatar, troca de senha. Todos entram como jogador; o **modo mestre** é ativado no Perfil com o **token de mestre** (`MASTER_TOKEN`) e desativado quando outra pessoa for mestrar. Código de convite opcional (`INVITE_CODE`). |
 | 2 | Agendar e comparar datas (disponível/indisponível) | `/agenda` — modo **Minha agenda** (pincel: Disponível / Talvez / Indisponível; tocar de novo desmarca) e modo **Comparar grupo** (pontos coloridos por jogador, dia verde = todos podem, borda vermelha = alguém não pode). Painel do dia, **Melhores datas** ranqueadas e criação de **sessões**. |
 | 3 | Upload de imagens em Mapas e NPCs | `/mapas` — abas Mapas/NPCs, upload com pré-visualização. Mapas têm **marcadores clicáveis** (posição em %). **Todos visualizam; só quem está com o modo mestre ativo envia, edita, exclui e marca.** |
 | 4 | Upload de PDF da ficha, visível para todos | `/personagens` — retrato + ficha em PDF; qualquer membro visualiza (pdf.js, funciona no celular), abre em nova aba ou baixa. Só dono/mestre edita. |
@@ -147,6 +147,7 @@ ordem-do-chaos/
 - [API REST](docs/API.md) — todos os endpoints, payloads e códigos de erro
 - [Banco de dados](docs/BANCO-DE-DADOS.md) — modelo ER, tabelas, restrições e índices
 - [Decisões de arquitetura (ADRs)](docs/DECISOES.md) — o porquê de cada escolha
+- [LGPD e segurança](docs/LGPD.md) — inventário de dados, direitos do titular, medidas de segurança, plano de incidentes
 - [Roadmap](docs/ROADMAP.md) — o que vem a seguir
 
 ---
@@ -163,7 +164,8 @@ ordem-do-chaos/
 | `SMTP_USER` / `SMTP_PASS` | ✅ com SMTP | —           | Login SMTP (no Gmail, use uma *senha de app*) |
 | `MAIL_FROM`      | ✅ com Brevo | `SMTP_USER`              | Remetente (no Brevo, precisa estar verificado) |
 | `R2_ACCOUNT_ID` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | ✅ no Render | — | Cloudflare R2 para imagens e PDFs. Sem `R2_BUCKET`, usa o disco (`UPLOAD_DIR`) |
-| `TRUST_PROXY`    |    | `1`                            | Nº de proxies confiáveis na frente da API (limite de tentativas por IP) |
+| `TRUST_PROXY`    |    | `1` (`4` no Render via Vercel) | Nº de proxies confiáveis na frente da API (limite de tentativas por IP) |
+| `PRIVACY_CONTACT`|    | `MAIL_FROM`                    | E-mail de contato do titular exibido na Política de Privacidade (LGPD) |
 | `APP_NAME`       |    | `GREMAD`                       | Nome no assunto/corpo do e-mail |
 | `JWT_SECRET`     | ✅ | —                              | Segredo do token (≥ 32 caracteres em produção) |
 | `MASTER_TOKEN`   | ✅ | —                              | Token que ativa o modo mestre (≥ 8 caracteres). Trocar o valor revoga todos os mestres. |

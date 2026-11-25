@@ -4,6 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 import { env } from './config/env.js';
+import { PRIVACY_POLICY_VERSION } from './config/privacy.js';
 import { logger } from './config/logger.js';
 import { query } from './db/pool.js';
 import { requireAuth } from './middlewares/auth.js';
@@ -22,6 +23,9 @@ import { notFound } from './utils/errors.js';
 /**
  * Monta a aplicação Express (sem abrir porta) — facilita testes de integração.
  */
+/** Caminho completo da requisição, sem query string (o Express encurta req.url dentro dos sub-roteadores). */
+const routeOf = (req) => (req.originalUrl ?? req.url ?? '').split('?')[0];
+
 export function createApp() {
   const app = express();
 
@@ -34,12 +38,29 @@ export function createApp() {
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
-  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/api/health' } }));
+  app.use(
+    pinoHttp({
+      logger,
+      autoLogging: { ignore: (req) => req.url === '/api/health' },
+      // LGPD (necessidade): o log de acesso guarda só o essencial para diagnóstico.
+      // Sem IP, cabeçalhos, cookies, navegador nem query string (que pode ter dados pessoais).
+      serializers: {
+        req: (req) => ({ method: req.method, path: routeOf(req.raw ?? req) }),
+        res: (res) => ({ statusCode: res.statusCode }),
+      },
+      customSuccessMessage: (req, res) => `${req.method} ${routeOf(req)} ${res.statusCode}`,
+      customErrorMessage: (req, res) => `${req.method} ${routeOf(req)} ${res.statusCode}`,
+    }),
+  );
 
   // ---- Rotas públicas ----
   app.get('/api/health', async (_req, res) => {
     await query('SELECT 1');
     res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+  // Dados públicos da Política de Privacidade (controlador e canal de contato)
+  app.get('/api/legal', (_req, res) => {
+    res.json({ controller: env.appName, contactEmail: env.privacyContact, policyVersion: PRIVACY_POLICY_VERSION });
   });
   app.use('/api/auth', authRoutes);
 

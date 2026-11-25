@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { AuthPage } from './features/auth/AuthPage.jsx';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage.jsx';
 import { VerifyEmailPage } from './features/auth/VerifyEmailPage.jsx';
+import { PrivacyPage } from './features/legal/PrivacyPage.jsx';
 
 // Code splitting por rota: cada aba é baixada sob demanda.
 const AgendaPage = lazy(() => import('./features/agenda/AgendaPage.jsx'));
@@ -51,6 +52,9 @@ export function App() {
           <Route path="/cadastro" element={<AuthPage mode="register" />} />
           <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
         </Route>
+
+        {/* Pública: acessível logado ou não (transparência — LGPD art. 9º) */}
+        <Route path="/privacidade" element={<PrivacyPage />} />
 
         <Route element={<RequireUnverified />}>
           <Route path="/confirmar-email" element={<VerifyEmailPage />} />
