@@ -19,14 +19,26 @@ function createBrevoTransport({ apiKey, from }) {
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Brevo respondeu ${res.status}: ${body.slice(0, 300)}`);
+      throw Object.assign(new Error(`Brevo respondeu ${res.status}: ${body.slice(0, 300)}`), { status: res.status });
     }
     return res.status === 204 ? null : res.json().catch(() => null);
   };
 
   return {
     label: 'Brevo (API)',
-    verify: () => call('/account'),
+    /**
+     * Confere a chave consultando /account. 401 = chave inválida (erro).
+     * 403 = chave reconhecida, mas sem permissão para ler a conta — comum em chaves com
+     * permissões restritas; o envio (/smtp/email) usa outra permissão, então não é falha.
+     */
+    verify: async () => {
+      try {
+        await call('/account');
+      } catch (error) {
+        if (error.status !== 403) throw error;
+        logger.warn('Brevo: chave reconhecida, mas sem acesso a /account — o envio será testado no primeiro e-mail.');
+      }
+    },
     send: ({ to, toName, subject, text, html }) =>
       call('/smtp/email', {
         method: 'POST',
