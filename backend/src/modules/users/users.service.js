@@ -39,7 +39,11 @@ export const usersService = {
     if (!hash || !(await bcrypt.compare(currentPassword, hash))) {
       throw badRequest('Senha atual incorreta.');
     }
-    await usersRepository.update(userId, { passwordHash: await bcrypt.hash(newPassword, BCRYPT_ROUNDS) });
+    // passwordChangedAt invalida os logins emitidos antes (encerra as sessões em outros aparelhos)
+    return usersRepository.update(userId, {
+      passwordHash: await bcrypt.hash(newPassword, BCRYPT_ROUNDS),
+      passwordChangedAt: new Date(),
+    });
   },
 
   /**

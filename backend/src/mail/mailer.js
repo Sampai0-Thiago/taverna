@@ -19,14 +19,26 @@ function createBrevoTransport({ apiKey, from }) {
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Brevo respondeu ${res.status}: ${body.slice(0, 300)}`);
+      throw Object.assign(new Error(`Brevo respondeu ${res.status}: ${body.slice(0, 300)}`), { status: res.status });
     }
     return res.status === 204 ? null : res.json().catch(() => null);
   };
 
   return {
     label: 'Brevo (API)',
-    verify: () => call('/account'),
+    /**
+     * Confere a chave consultando /account. 401 = chave inválida (erro).
+     * 403 = chave reconhecida, mas sem permissão para ler a conta — comum em chaves com
+     * permissões restritas; o envio (/smtp/email) usa outra permissão, então não é falha.
+     */
+    verify: async () => {
+      try {
+        await call('/account');
+      } catch (error) {
+        if (error.status !== 403) throw error;
+        logger.warn('Brevo: chave reconhecida, mas sem acesso a /account — o envio será testado no primeiro e-mail.');
+      }
+    },
     send: ({ to, toName, subject, text, html }) =>
       call('/smtp/email', {
         method: 'POST',
@@ -55,6 +67,27 @@ const transport = !env.mail ? null : env.mail.provider === 'brevo' ? createBrevo
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+/** E-mail com um código numérico (confirmação de cadastro, recuperação de senha…). */
+async function sendCode({ to, name, code, ttlMinutes, kind, intro, ignore }) {
+  const subject = `${code} é o seu código de ${kind} — ${env.appName}`;
+  const text = [`Olá, ${name}!`, '', `${intro} ${env.appName}: ${code}`, '', `Ele vale por ${ttlMinutes} minutos. ${ignore}`].join(
+    '\n',
+  );
+  const html = `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#222">
+        <p>Olá, ${escapeHtml(name)}!</p>
+        <p>${escapeHtml(intro)} <strong>${escapeHtml(env.appName)}</strong>:</p>
+        <p style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;margin:24px 0">${code}</p>
+        <p style="color:#666;font-size:13px">Ele vale por ${ttlMinutes} minutos. ${escapeHtml(ignore)}</p>
+      </div>`;
+
+  if (!transport) {
+    logger.warn({ to, code, kind }, `✉️  [e-mail desligado] código de ${kind}`);
+    return;
+  }
+  await transport.send({ to, toName: name, subject, text, html });
+}
+
 export const mailer = {
   get configured() {
     return transport !== null;
@@ -74,28 +107,27 @@ export const mailer = {
     }
   },
 
-  async sendVerificationCode({ to, name, code, ttlMinutes }) {
-    const subject = `${code} é o seu código de confirmação — ${env.appName}`;
-    const text = [
-      `Olá, ${name}!`,
-      '',
-      `Seu código de confirmação do ${env.appName} é: ${code}`,
-      '',
-      `Ele vale por ${ttlMinutes} minutos. Se você não criou uma conta, ignore este e-mail.`,
-    ].join('\n');
-    const html = `
-      <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#222">
-        <p>Olá, ${escapeHtml(name)}!</p>
-        <p>Seu código de confirmação do <strong>${escapeHtml(env.appName)}</strong> é:</p>
-        <p style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;margin:24px 0">${code}</p>
-        <p style="color:#666;font-size:13px">Ele vale por ${ttlMinutes} minutos.
-          Se você não criou uma conta, ignore este e-mail.</p>
-      </div>`;
+  sendVerificationCode({ to, name, code, ttlMinutes }) {
+    return sendCode({
+      to,
+      name,
+      code,
+      ttlMinutes,
+      kind: 'confirmação',
+      intro: 'Seu código de confirmação do',
+      ignore: 'Se você não criou uma conta, ignore este e-mail.',
+    });
+  },
 
-    if (!transport) {
-      logger.warn({ to, code }, '✉️  [e-mail desligado] código de confirmação');
-      return;
-    }
-    await transport.send({ to, toName: name, subject, text, html });
+  sendPasswordResetCode({ to, name, code, ttlMinutes }) {
+    return sendCode({
+      to,
+      name,
+      code,
+      ttlMinutes,
+      kind: 'recuperação de senha',
+      intro: 'Use este código para criar uma nova senha no',
+      ignore: 'Se você não pediu para trocar a senha, ignore este e-mail — sua senha continua a mesma.',
+    });
   },
 };

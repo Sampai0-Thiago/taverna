@@ -21,6 +21,10 @@ async function loadUser(req) {
 
   const user = await usersRepository.findById(payload.sub);
   if (!user) throw unauthorized('Conta não encontrada.');
+  // Login emitido antes da última troca de senha não vale mais.
+  if (user.password_changed_at && payload.iat < Math.floor(new Date(user.password_changed_at).getTime() / 1000)) {
+    throw unauthorized('Sua senha foi alterada. Entre novamente.');
+  }
   req.user = { ...user, role: roleOf(user) }; // papel efetivo, recalculado a cada requisição
 }
 
