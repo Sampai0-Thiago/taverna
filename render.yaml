@@ -21,6 +21,11 @@ services:
         value: America/Sao_Paulo
       - key: APP_NAME
         value: GREMAD
+      # Navegador → Vercel → Cloudflare → proxy do Render → API: o IP real do usuário está a 4 saltos.
+      # Sem isso, todos os jogadores dividiriam o mesmo limite de tentativas por IP.
+      # (Quem forjar o IP chamando o Render direto ainda esbarra no bloqueio por conta.)
+      - key: TRUST_PROXY
+        value: "4"
       # Domínio do frontend na Vercel (ex.: https://gremad.vercel.app)
       - key: CORS_ORIGIN
         sync: false

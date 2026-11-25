@@ -76,6 +76,8 @@ export const passwordResetService = {
     const updated = await usersRepository.update(user.id, {
       passwordHash: await bcrypt.hash(newPassword, BCRYPT_ROUNDS),
       passwordChangedAt: now,
+      failedLogins: 0, // quem provou ter acesso ao e-mail destrava a conta
+      lockedUntil: null,
       ...(user.email_verified_at ? {} : { emailVerifiedAt: now }),
     });
     await repo.remove(user.id);

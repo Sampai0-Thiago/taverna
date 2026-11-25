@@ -4,6 +4,8 @@ import { env } from '../config/env.js';
 import { fileStorage } from '../storage/fileStorage.js';
 import { AppError } from '../utils/errors.js';
 import { detectFileType, IMAGE_TYPES, PDF_TYPES } from '../utils/fileSignature.js';
+import { stripImageMetadata } from '../utils/imageSanitizer.js';
+import path from 'node:path';
 
 const KINDS = {
   image: {
@@ -66,6 +68,14 @@ export function uploadFields(fields) {
           // garante extensão coerente com o conteúdo real
           if (!file.filename.endsWith(EXTENSIONS[detected])) {
             throw new AppError(415, 'Extensão não corresponde ao conteúdo do arquivo.', 'UNSUPPORTED_FILE');
+          }
+          // Imagens: remove EXIF/GPS e outros metadados pessoais (ver utils/imageSanitizer.js)
+          if (IMAGE_TYPES.has(detected)) {
+            try {
+              await stripImageMetadata(path.join(fileStorage.dir, file.filename), detected);
+            } catch {
+              throw new AppError(415, `Não foi possível processar a imagem "${file.originalname}".`, 'UNSUPPORTED_FILE');
+            }
           }
           req.uploaded[file.fieldname] = file.filename;
           req.uploaded[`${file.fieldname}OriginalName`] = file.originalname;

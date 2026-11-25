@@ -11,7 +11,7 @@ export function AuthPage({ mode }) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ name: '', email: '', password: '', inviteCode: '', color: PLAYER_COLORS[0] });
+  const [form, setForm] = useState({ name: '', email: '', password: '', inviteCode: '', color: PLAYER_COLORS[0], acceptPrivacy: false });
   const mutation = isRegister ? register : login;
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -19,7 +19,7 @@ export function AuthPage({ mode }) {
   const submit = (e) => {
     e.preventDefault();
     const payload = isRegister
-      ? { name: form.name, email: form.email, password: form.password, color: form.color, inviteCode: form.inviteCode || undefined }
+      ? { name: form.name, email: form.email, password: form.password, color: form.color, inviteCode: form.inviteCode || undefined, acceptPrivacy: form.acceptPrivacy }
       : { email: form.email, password: form.password };
     mutation.mutate(payload, { onSuccess: () => navigate(location.state?.from ?? '/agenda', { replace: true }) });
   };
@@ -81,10 +81,25 @@ export function AuthPage({ mode }) {
             <Field label="Código de convite" hint="Só se o mestre tiver definido um">
               <input value={form.inviteCode} onChange={set('inviteCode')} autoComplete="off" />
             </Field>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={form.acceptPrivacy}
+                onChange={(e) => setForm((f) => ({ ...f, acceptPrivacy: e.target.checked }))}
+                required
+              />
+              <span>
+                Li e concordo com a{' '}
+                <Link to="/privacidade" target="_blank" rel="noreferrer">
+                  Política de Privacidade
+                </Link>
+                .
+              </span>
+            </label>
           </>
         )}
 
-        <button className="btn btn--gold btn--block" disabled={mutation.isPending}>
+        <button className="btn btn--gold btn--block" disabled={mutation.isPending || (isRegister && !form.acceptPrivacy)}>
           {mutation.isPending ? 'Aguarde…' : isRegister ? 'Criar conta' : 'Entrar'}
         </button>
 
@@ -94,6 +109,9 @@ export function AuthPage({ mode }) {
           ) : (
             <>Primeira vez? <Link to="/cadastro">Criar conta</Link></>
           )}
+        </p>
+        <p className="auth__legal">
+          <Link to="/privacidade">Política de Privacidade</Link>
         </p>
       </form>
     </div>

@@ -8,6 +8,8 @@ export const registerSchema = z
     password: z.string().min(8, 'A senha precisa de pelo menos 8 caracteres').max(128),
     color: hexColor.optional(),
     inviteCode: z.string().trim().max(100).optional(),
+    // LGPD: ciência da Política de Privacidade é exigida no cadastro (registrada com data e versão)
+    acceptPrivacy: z.literal(true, { message: 'É preciso aceitar a Política de Privacidade' }),
   })
   .strict();
 
